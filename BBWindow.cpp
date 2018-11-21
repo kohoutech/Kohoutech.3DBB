@@ -21,21 +21,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <stdio.h>
 
-HINSTANCE  appInstance;
-HWND       parentWnd;
-HWND	   d3dWnd;
-int		   d3dWidth;
-int		   d3dHeight;
-
-LRESULT CALLBACK BBWindowProc (HWND, UINT, WPARAM, LPARAM);
-
-struct VERTEX{FLOAT X, Y, Z; D3DXCOLOR Color;};
-
 void StartUpD3D(HWND hWnd);    
 void InitGraphics(void);    
 void InitPipeline(void);    
 void RenderFrame(void);     
 void ShutdownD3D(void);        
+
+struct VERTEX{FLOAT X, Y, Z; D3DXCOLOR Color;};
+
 
 IDXGISwapChain *swapchain;             
 ID3D11Device *dev;                     
@@ -44,15 +37,62 @@ ID3D11RenderTargetView *backbuffer;
 ID3D11InputLayout *pLayout;            
 ID3D11VertexShader *pVertShader;
 ID3D11PixelShader *pPixelShader;                
-ID3D11Buffer *pVBuffer;                
+ID3D11Buffer *pVBuffer; 
 
-void CreateBBWindow()
+BBWindow* BBWindow::aBBWindow;
+
+//- dll interface -------------------------------------------------------------
+
+extern "C" __declspec(dllexport) void CreateBBWindow(HMODULE hModule, HWND phwd ) {
+
+	BBWindow::aBBWindow = new BBWindow(hModule, phwd );
+}
+
+extern "C" __declspec(dllexport) void ResizeBBWindow(int width, int height) {
+
+	BBWindow::aBBWindow->ResizeBBWindow(width, height);
+}
+
+extern "C" __declspec(dllexport) void CloseBBWindow() {
+
+	BBWindow::aBBWindow->CloseBBWindow();
+}
+
+void BBWindow::CloseBBWindow() {
+	ShutdownD3D();
+	SendMessage(d3dWnd, WM_CLOSE, NULL, NULL);	
+}
+
+
+//cons
+BBWindow::BBWindow(HMODULE hModule, HWND phwd)
+{
+	appInstance = hModule;
+	parentWnd = phwd;
+	RECT rect;
+	GetWindowRect(parentWnd, &rect);
+	d3dWidth = rect.right - rect.left;
+	d3dHeight = rect.bottom - rect.top;
+	CreateBBWindow();	
+}
+
+//shut down
+BBWindow::~BBWindow()
+{
+}
+
+
+//- window methods ------------------------------------------------------------
+
+//we register a BBWindowClass and create a window "d3dWnd" from this class. the window will receive its own messages
+//but it will entirely cover the client area of the C# window and move/resize with it so the two will appear as one
+void BBWindow::CreateBBWindow()
 {
 	WNDCLASSEX wc;
 
 	wc.hInstance =  appInstance;
 	wc.lpszClassName = (LPCWSTR)L"BBWindowClass";
-	wc.lpfnWndProc = BBWindowProc;
+	wc.lpfnWndProc = BBWindow::BBWindowProc;
 	wc.style = CS_DBLCLKS;
 	wc.cbSize = sizeof (WNDCLASSEX);
 	wc.hIcon = LoadIcon (NULL, IDI_APPLICATION);
@@ -81,7 +121,7 @@ void CreateBBWindow()
 	StartUpD3D(d3dWnd);
 }
 
-LRESULT CALLBACK BBWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK BBWindow::BBWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
@@ -127,10 +167,17 @@ LRESULT CALLBACK BBWindowProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 	return 0;
 }
 
+void BBWindow::ResizeBBWindow(int width, int height) {
+	d3dWidth = width;
+	d3dHeight = height;
+	SetWindowPos(d3dWnd, HWND_TOP, 0, 0, width, height, NULL);
+}
+
 //- Direct 3D methods ---------------------------------------------------------
 
 void StartUpD3D(HWND hWnd)
 {
+	//create the swap chain description
 	DXGI_SWAP_CHAIN_DESC scd;
 	ZeroMemory(&scd, sizeof(DXGI_SWAP_CHAIN_DESC));
 
@@ -164,13 +211,14 @@ void StartUpD3D(HWND hWnd)
 
 	devcon->OMSetRenderTargets(1, &backbuffer, NULL);
 
+	//set viewport to window size
 	D3D11_VIEWPORT viewport;
 	ZeroMemory(&viewport, sizeof(D3D11_VIEWPORT));
 
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
-	viewport.Width = d3dWidth;
-	viewport.Height = d3dHeight;
+	viewport.Width = BBWindow::aBBWindow->d3dWidth;		
+	viewport.Height = BBWindow::aBBWindow->d3dHeight;
 
 	devcon->RSSetViewports(1, &viewport);
 
@@ -251,28 +299,3 @@ void ShutdownD3D(void)
 	devcon->Release();
 }
 
-//-----------------------------------------------------------------------------
-
-extern "C" __declspec(dllexport) void CreateBBWindow(HMODULE hModule, HWND _phwd ) {
-
-	appInstance = hModule;
-	parentWnd = _phwd;
-	RECT rect;
-	GetWindowRect(parentWnd, &rect);
-	d3dWidth = rect.right - rect.left;
-	d3dHeight = rect.bottom - rect.top;
-	CreateBBWindow();	
-}
-
-extern "C" __declspec(dllexport) void ResizeBBWindow(int width, int height) {
-
-	d3dWidth = width;
-	d3dHeight = height;
-	SetWindowPos(d3dWnd, HWND_TOP, 0, 0, width, height, NULL);
-}
-
-extern "C" __declspec(dllexport) void CloseBBWindow() {
-
-	ShutdownD3D();
-	SendMessage(d3dWnd, WM_CLOSE, NULL, NULL);	
-}

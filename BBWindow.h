@@ -30,4 +30,33 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #pragma comment (lib, "d3dx11.lib")
 #pragma comment (lib, "d3dx10.lib")
 
+class BBWindow
+{
+public:
+	BBWindow(HMODULE hModule, HWND phwd);
+	~BBWindow();
+
+	static BBWindow* aBBWindow;		//for front end communication
+
+	int		   d3dWidth;
+	int		   d3dHeight;
+
+	void ResizeBBWindow(int width, int height);
+	void CloseBBWindow();
+
+protected:
+
+	//windows vars
+	HINSTANCE  appInstance;
+	HWND       parentWnd;
+	HWND	   d3dWnd;
+
+	void CreateBBWindow();
+	
+	static LRESULT CALLBACK BBWindowProc (HWND, UINT, WPARAM, LPARAM);
+
+
+protected:
+};
+
 #endif // BBWindow_H
