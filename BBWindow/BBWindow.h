@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------------
 Aurora 3dBB Library
-Copyright (C) 2007-2018  George E Greaney
+Copyright (C) 2007-2020  George E Greaney
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
