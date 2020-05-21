@@ -1,5 +1,5 @@
 ﻿/* ----------------------------------------------------------------------------
-Aurora 3dBB Library
+Aurora ThreeDBB Library
 Copyright (C) 2007-2020  George E Greaney
 
 This program is free software; you can redistribute it and/or
